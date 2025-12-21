@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import { authRouter } from "./routes/auth.routes";
+import { orgsRouter } from "./routes/orgs.routes";
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.use(cors({
 }));
 
 app.use("/api/auth", authRouter);
+app.use("/api/orgs", orgsRouter);
 
 const port = Number(process.env.PORT ?? 4000);
 app.listen(port, () => {
