@@ -3,10 +3,27 @@ import { z } from "zod";
 import { pool } from "../db";
 import { newId } from "../utils/ids";
 import { hashPassword, verifyPassword } from "../utils/password";
-import { signAccessToken } from "../utils/jwt";
+import {
+  signAccessToken,
+  generateRefreshToken,
+  hashRefreshToken,
+  refreshExpiresAt,
+} from "../utils/tokens";
 import { requireAuth, AuthedRequest } from "../middleware/requireAuth";
+import type { CookieOptions } from "express";
 
 export const authRouter = Router();
+
+function getRefreshCookieOptions(): CookieOptions {
+  const isProd = process.env.NODE_ENV === "production";
+
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    path: "/api/auth/refresh",
+  };
+}
 
 const signupSchema = z.object({
   email: z.string().email(),
@@ -70,6 +87,24 @@ authRouter.post("/login", async (req, res) => {
     return res.status(401).json({ error: "Invalid email or password" });
   }
 
+  
+  const refreshToken = generateRefreshToken();
+  const refreshTokenHash = hashRefreshToken(refreshToken);
+  const expiresAt = refreshExpiresAt();
+
+  // store refresh token hash in DB
+  await pool.query(
+    `insert into refresh_tokens (id, user_id, token_hash, expires_at)
+    values ($1, $2, $3, $4)`,
+    [newId(), user.id, refreshTokenHash, expiresAt]
+  );
+
+  // set cookie with raw refresh token
+  res.cookie(process.env.REFRESH_COOKIE_NAME ?? "refresh_token", refreshToken, {
+    ...getRefreshCookieOptions(),
+    expires: expiresAt,
+  });
+
   const accessToken = signAccessToken({ userId: user.id });
 
   return res.json({
@@ -88,3 +123,65 @@ authRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
 
   return res.json({ user: result.rows[0] });
 });
+
+authRouter.post("/refresh", async (req, res) => {
+  const cookieName = process.env.REFRESH_COOKIE_NAME ?? "refresh_token";
+  const raw = req.cookies?.[cookieName];
+
+  if (!raw) return res.status(401).json({ error: "Missing refresh token" });
+
+  const tokenHash = hashRefreshToken(raw);
+
+  const found = await pool.query(
+    `select id, user_id as "userId", revoked_at as "revokedAt", expires_at as "expiresAt"
+     from refresh_tokens
+     where token_hash = $1`,
+    [tokenHash]
+  );
+
+  if (!found.rowCount) return res.status(401).json({ error: "Invalid refresh token" });
+
+  const row = found.rows[0];
+
+  if (row.revokedAt) return res.status(401).json({ error: "Refresh token revoked" });
+  if (new Date(row.expiresAt).getTime() <= Date.now()) return res.status(401).json({ error: "Refresh token expired" });
+
+  await pool.query(`update refresh_tokens set revoked_at = now() where id = $1`, [row.id]);
+
+  const newRefresh = generateRefreshToken();
+  const newHash = hashRefreshToken(newRefresh);
+  const newExpiresAt = refreshExpiresAt();
+
+  await pool.query(
+    `insert into refresh_tokens (id, user_id, token_hash, expires_at)
+     values ($1, $2, $3, $4)`,
+    [newId(), row.userId, newHash, newExpiresAt]
+  );
+
+  res.cookie(cookieName, newRefresh, {
+    ...getRefreshCookieOptions(),
+    expires: newExpiresAt,
+  });
+
+  const newAccessToken = signAccessToken({ userId: row.userId });
+
+  return res.json({ accessToken: newAccessToken });
+});
+
+authRouter.post("/logout", async (req, res) => {
+  const cookieName = process.env.REFRESH_COOKIE_NAME ?? "refresh_token";
+  const raw = req.cookies?.[cookieName];
+
+  if (raw) {
+    const tokenHash = hashRefreshToken(raw);
+    await pool.query(
+      `update refresh_tokens set revoked_at = now()
+       where token_hash = $1 and revoked_at is null`,
+      [tokenHash]
+    );
+  }
+
+  res.clearCookie(cookieName, getRefreshCookieOptions());
+  return res.json({ ok: true });
+});
+
