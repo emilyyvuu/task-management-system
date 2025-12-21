@@ -3,6 +3,7 @@ import { z } from "zod";
 import { pool } from "../db";
 import { newId } from "../utils/ids";
 import { requireAuth, AuthedRequest } from "../middleware/requireAuth";
+import { logAudit } from "../audit/logAudit";
 
 export const tasksRouter = Router();
 
@@ -90,6 +91,20 @@ tasksRouter.post("/projects/:projectId/tasks", requireAuth, async (req: AuthedRe
     ]
   );
 
+  await logAudit({
+  orgId,
+  projectId,
+  actorUserId: userId,
+  taskId: taskId,
+  action: "task.created",
+  metadata: {
+    title,
+    columnId: finalColumnId,
+    priority: priority ?? "MEDIUM",
+    dueDate: dueDate ?? null
+  }
+});
+
   return res.status(201).json({ task: nowResult.rows[0] });
 });
 
@@ -102,12 +117,12 @@ tasksRouter.patch("/tasks/:taskId", requireAuth, async (req: AuthedRequest, res)
   const taskId = req.params.taskId;
 
   const task = await pool.query(
-    "select org_id as \"orgId\" from tasks where id = $1",
+    "select org_id as \"orgId\", project_id as \"projectId\" from tasks where id = $1",
     [taskId]
   );
   if (!task.rowCount) return res.status(404).json({ error: "Task not found" });
 
-  const orgId = task.rows[0].orgId;
+  const { orgId, projectId } = task.rows[0];
 
   const member = await pool.query(
     "select 1 from memberships where org_id = $1 and user_id = $2",
@@ -142,6 +157,8 @@ tasksRouter.patch("/tasks/:taskId", requireAuth, async (req: AuthedRequest, res)
 
   values.push(taskId);
 
+  const changedFields = Object.keys(req.body);
+
   const updated = await pool.query(
     `update tasks set ${fields.join(", ")}
      where id = $${i}
@@ -149,6 +166,17 @@ tasksRouter.patch("/tasks/:taskId", requireAuth, async (req: AuthedRequest, res)
                title, description, priority, due_date as "dueDate", created_at as "createdAt", updated_at as "updatedAt"`,
     values
   );
+
+  await logAudit({
+    orgId,
+    projectId,
+    actorUserId: userId,
+    taskId,
+    action: "task.updated",
+    metadata: {
+      changedFields
+    }
+  });
 
   return res.json({ task: updated.rows[0] });
 });
@@ -198,6 +226,18 @@ tasksRouter.post("/tasks/:taskId/move", requireAuth, async (req: AuthedRequest, 
     [toColumnId, taskId]
   );
 
+  await logAudit({
+  orgId,
+  projectId,
+  actorUserId: userId,
+  taskId,
+  action: "task.moved",
+  metadata: {
+    fromColumnId: task.rows[0].fromColumnId,
+    toColumnId
+  }
+});
+
   return res.json({ task: moved.rows[0] });
 });
 
@@ -209,9 +249,10 @@ tasksRouter.delete("/tasks/:taskId", requireAuth, async (req: AuthedRequest, res
   const taskId = req.params.taskId;
 
   const task = await pool.query(
-    "select org_id as \"orgId\" from tasks where id = $1",
+    "select org_id as \"orgId\", project_id as \"projectId\" from tasks where id = $1",
     [taskId]
   );
+
   if (!task.rowCount) return res.status(404).json({ error: "Task not found" });
 
   const orgId = task.rows[0].orgId;
@@ -221,6 +262,15 @@ tasksRouter.delete("/tasks/:taskId", requireAuth, async (req: AuthedRequest, res
     [orgId, userId]
   );
   if (!member.rowCount) return res.status(403).json({ error: "Forbidden" });
+
+  await logAudit({
+    orgId,
+    projectId: task.rows[0].projectId,
+    actorUserId: userId,
+    taskId,
+    action: "task.deleted",
+    metadata: {}
+  });
 
   await pool.query("delete from tasks where id = $1", [taskId]);
   return res.status(204).send();
