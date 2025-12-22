@@ -134,13 +134,14 @@ tasksRouter.patch("/tasks/:taskId", requireAuth, async (req: AuthedRequest, res)
     title: z.string().min(1).optional(),
     description: z.string().nullable().optional(),
     priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
-    dueDate: z.string().datetime().nullable().optional()
+    dueDate: z.string().datetime().nullable().optional(),
+    assigneeUserId: z.string().nullable().optional(),
   });
 
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
 
-  const { title, description, priority, dueDate } = parsed.data;
+  const { title, description, priority, dueDate, assigneeUserId } = parsed.data;
 
   const fields: string[] = [];
   const values: any[] = [];
@@ -150,6 +151,7 @@ tasksRouter.patch("/tasks/:taskId", requireAuth, async (req: AuthedRequest, res)
   if (description !== undefined) { fields.push(`description = $${i++}`); values.push(description); }
   if (priority !== undefined) { fields.push(`priority = $${i++}`); values.push(priority); }
   if (dueDate !== undefined) { fields.push(`due_date = $${i++}`); values.push(dueDate ? new Date(dueDate) : null); }
+  if (assigneeUserId !== undefined) { fields.push(`assignee_user_id = $${i++}`); values.push(assigneeUserId); }
 
   if (fields.length === 0) return res.status(400).json({ error: "No fields to update" });
 
@@ -159,24 +161,43 @@ tasksRouter.patch("/tasks/:taskId", requireAuth, async (req: AuthedRequest, res)
 
   const changedFields = Object.keys(req.body);
 
+  if (assigneeUserId) {
+    const assigneeOk = await pool.query(
+      `select 1 from memberships where org_id = $1 and user_id = $2`,
+      [orgId, assigneeUserId]
+    );
+    if (!assigneeOk.rowCount) return res.status(400).json({ error: "Assignee must be a member of the organization" });
+  }
+
   const updated = await pool.query(
     `update tasks set ${fields.join(", ")}
-     where id = $${i}
-     returning id, org_id as "orgId", project_id as "projectId", column_id as "columnId",
-               title, description, priority, due_date as "dueDate", created_at as "createdAt", updated_at as "updatedAt"`,
+    where id = $${i}
+    returning id, org_id as "orgId", project_id as "projectId", column_id as "columnId",
+              title, description, priority, due_date as "dueDate",
+              assignee_user_id as "assigneeUserId",
+              created_at as "createdAt", updated_at as "updatedAt"`,
     values
   );
-
+  
   await logAudit({
     orgId,
     projectId,
     actorUserId: userId,
     taskId,
     action: "task.updated",
-    metadata: {
-      changedFields
-    }
+    metadata: { changedFields }
   });
+
+  if (assigneeUserId !== undefined) {
+    await logAudit({
+      orgId,
+      projectId,
+      actorUserId: userId,
+      taskId,
+      action: "task.assignee_changed",
+      metadata: { assigneeUserId }
+    });
+  }
 
   return res.json({ task: updated.rows[0] });
 });

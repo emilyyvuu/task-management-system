@@ -7,6 +7,9 @@ import { orgsRouter } from "./routes/orgs.routes";
 import { projectsRouter } from "./routes/projects.routes";
 import { tasksRouter } from "./routes/tasks.routes";
 import { auditRouter } from "./routes/audit.routes";
+import { invitesRouter } from "./routes/invites.routes";
+import { membersRouter } from "./routes/members.routes";
+import { commentsRouter } from "./routes/comments.routes";
 
 dotenv.config();
 
@@ -24,6 +27,9 @@ app.use("/api/orgs", orgsRouter);
 app.use("/api", projectsRouter);
 app.use("/api", tasksRouter);
 app.use("/api", auditRouter);
+app.use("/api", invitesRouter);
+app.use("/api", membersRouter);
+app.use("/api", commentsRouter);
 
 const port = Number(process.env.PORT ?? 4000);
 app.listen(port, () => {
