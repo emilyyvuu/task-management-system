@@ -59,6 +59,40 @@ labelsRouter.get(
 );
 
 /**
+ * GET /api/tasks/:taskId/labels
+ * Lists labels on a task.
+ */
+labelsRouter.get("/tasks/:taskId/labels", requireAuth, async (req: AuthedRequest, res) => {
+  const userId = req.user!.id;
+  const taskId = req.params.taskId;
+
+  const t = await pool.query(
+    `select org_id as "orgId" from tasks where id = $1`,
+    [taskId]
+  );
+  if (!t.rowCount) return res.status(404).json({ error: "Task not found" });
+
+  const orgId = t.rows[0].orgId;
+
+  const member = await pool.query(
+    `select 1 from memberships where org_id = $1 and user_id = $2`,
+    [orgId, userId]
+  );
+  if (!member.rowCount) return res.status(403).json({ error: "Forbidden" });
+
+  const labels = await pool.query(
+    `select l.id, l.org_id as "orgId", l.name, l.created_at as "createdAt"
+     from task_labels tl
+     join labels l on l.id = tl.label_id
+     where tl.task_id = $1
+     order by l.name asc`,
+    [taskId]
+  );
+
+  return res.json({ taskId, labels: labels.rows });
+});
+
+/**
  * PUT /api/tasks/:taskId/labels
  * Body: { labelIds: string[] }
  *
