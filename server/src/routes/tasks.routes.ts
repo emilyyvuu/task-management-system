@@ -33,7 +33,7 @@ async function getOrgIdIfProjectAccessAllowed(projectId: string, userId: string)
 
 /**
  * POST /api/projects/:projectId/tasks
- * Creates a task (defaults to Backlog column if you pass columnId or we auto-find Backlog)
+ * Create a task in a project. Defaults to Backlog column if none specified.
  */
 tasksRouter.post("/projects/:projectId/tasks", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.id;
@@ -110,7 +110,7 @@ tasksRouter.post("/projects/:projectId/tasks", requireAuth, async (req: AuthedRe
 
 /**
  * PATCH /api/tasks/:taskId
- * Edit basic fields (title, description, priority, dueDate, assignee later)
+ * Edit basic fields (title, description, priority, dueDate, assignee)
  */
 tasksRouter.patch("/tasks/:taskId", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.id;
@@ -264,6 +264,7 @@ tasksRouter.post("/tasks/:taskId/move", requireAuth, async (req: AuthedRequest, 
 
 /**
  * DELETE /api/tasks/:taskId
+ * Delete a task.
  */
 tasksRouter.delete("/tasks/:taskId", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.id;

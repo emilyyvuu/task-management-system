@@ -6,7 +6,7 @@ export const auditRouter = Router();
 
 /**
  * GET /api/projects/:projectId/audit
- * Returns audit logs for a project (members only)
+ * Returns audit logs for a project (200 most recent).
  */
 auditRouter.get("/projects/:projectId/audit", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.id;

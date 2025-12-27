@@ -30,6 +30,10 @@ const signupSchema = z.object({
   password: z.string().min(8)
 });
 
+/**
+ * POST /api/auth/signup
+ * Creates a new user and returns an access token.
+ */
 authRouter.post("/signup", async (req, res) => {
   const parsed = signupSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -64,6 +68,10 @@ const loginSchema = z.object({
   password: z.string().min(1)
 });
 
+/**
+ * POST /api/auth/login
+ * Logs in a user and returns an access token + sets refresh token cookie.
+ */
 authRouter.post("/login", async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -113,6 +121,10 @@ authRouter.post("/login", async (req, res) => {
   });
 });
 
+/**
+ * GET /api/auth/me
+ * Returns the authenticated user's info.
+ */
 authRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.id;
 
@@ -124,6 +136,10 @@ authRouter.get("/me", requireAuth, async (req: AuthedRequest, res) => {
   return res.json({ user: result.rows[0] });
 });
 
+/**
+ * POST /api/auth/refresh
+ * Uses the refresh token cookie to issue a new access token.
+ */
 authRouter.post("/refresh", async (req, res) => {
   const cookieName = process.env.REFRESH_COOKIE_NAME ?? "refresh_token";
   const raw = req.cookies?.[cookieName];
@@ -168,6 +184,10 @@ authRouter.post("/refresh", async (req, res) => {
   return res.json({ accessToken: newAccessToken });
 });
 
+/**
+ * POST /api/auth/logout
+ * Revokes the current refresh token and clears the cookie.
+ */
 authRouter.post("/logout", async (req, res) => {
   const cookieName = process.env.REFRESH_COOKIE_NAME ?? "refresh_token";
   const raw = req.cookies?.[cookieName];

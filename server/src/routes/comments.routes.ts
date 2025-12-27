@@ -9,6 +9,7 @@ export const commentsRouter = Router();
 
 /**
  * POST /api/tasks/:taskId/comments
+ * Add a comment to a task.
  */
 commentsRouter.post("/tasks/:taskId/comments", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.id;
@@ -56,6 +57,7 @@ commentsRouter.post("/tasks/:taskId/comments", requireAuth, async (req: AuthedRe
 
 /**
  * GET /api/tasks/:taskId/comments
+ * List comments for a task.
  */
 commentsRouter.get("/tasks/:taskId/comments", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.id;

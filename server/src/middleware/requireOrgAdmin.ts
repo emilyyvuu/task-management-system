@@ -2,6 +2,9 @@ import { Response, NextFunction } from "express";
 import { pool } from "../db";
 import { AuthedRequest } from "./requireAuth";
 
+/**
+ * Middleware that enforces that an authenticated user is an admin of the given organization.
+ */
 export async function requireOrgAdmin(req: AuthedRequest, res: Response, next: NextFunction) {
   const orgId = req.params.orgId;
   const userId = req.user?.id;

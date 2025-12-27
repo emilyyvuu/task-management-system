@@ -2,6 +2,9 @@ import { Response, NextFunction } from "express";
 import { pool } from "../db";
 import { AuthedRequest } from "./requireAuth";
 
+/**
+ * Middleware enforces that an authenticated user is a member of a specific organization.
+ */
 export async function requireOrgMember(req: AuthedRequest, res: Response, next: NextFunction) {
   const orgId = req.params.orgId;
   const userId = req.user?.id;

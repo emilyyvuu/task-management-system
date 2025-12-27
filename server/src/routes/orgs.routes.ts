@@ -7,7 +7,8 @@ import { requireAuth, AuthedRequest } from "../middleware/requireAuth";
 export const orgsRouter = Router();
 
 /**
- * Create an organization
+ * POST /api/orgs
+ * Create an organization. The creator becomes ADMIN.
  */
 orgsRouter.post("/", requireAuth, async (req: AuthedRequest, res) => {
   const schema = z.object({
@@ -42,6 +43,7 @@ orgsRouter.post("/", requireAuth, async (req: AuthedRequest, res) => {
 });
 
 /**
+ * GET /api/orgs
  * List organizations the current user belongs to
  */
 orgsRouter.get("/", requireAuth, async (req: AuthedRequest, res) => {

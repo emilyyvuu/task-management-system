@@ -10,6 +10,9 @@ import { auditRouter } from "./routes/audit.routes";
 import { invitesRouter } from "./routes/invites.routes";
 import { membersRouter } from "./routes/members.routes";
 import { commentsRouter } from "./routes/comments.routes";
+import { labelsRouter } from "./routes/labels.routes";
+import { orgMeRouter } from "./routes/orgMe.routes";
+import { errorHandler } from "./middleware/errorHandler";
 
 dotenv.config();
 
@@ -30,6 +33,10 @@ app.use("/api", auditRouter);
 app.use("/api", invitesRouter);
 app.use("/api", membersRouter);
 app.use("/api", commentsRouter);
+app.use("/api", labelsRouter);
+app.use("api", orgMeRouter);
+
+app.use(errorHandler);
 
 const port = Number(process.env.PORT ?? 4000);
 app.listen(port, () => {

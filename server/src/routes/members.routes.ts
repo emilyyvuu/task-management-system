@@ -9,6 +9,7 @@ export const membersRouter = Router();
 
 /**
  * GET /api/orgs/:orgId/members 
+ * List members of an org.
  */
 membersRouter.get(
   "/orgs/:orgId/members",

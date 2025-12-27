@@ -49,7 +49,7 @@ invitesRouter.post("/orgs/:orgId/invites", requireAuth, requireOrgAdmin, async (
 
 /**
  * POST /api/invites/accept
- * User must be logged in (so we know who is accepting)
+ * Accepts an invite (user must be logged in).
  */
 invitesRouter.post("/invites/accept", requireAuth, async (req: AuthedRequest, res) => {
   const userId = req.user!.id;

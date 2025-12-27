@@ -8,6 +8,7 @@ import { requireOrgMember } from "../middleware/requireOrgMember";
 export const projectsRouter = Router();
 
 /**
+ * POST /api/orgs/:orgId/projects
  * Create a project in an org.
  * Automatically creates default columns:
  * Backlog (0), In Progress (1), Done (2)
@@ -48,7 +49,8 @@ projectsRouter.post(
 );
 
 /**
- * List projects for an org (member only)
+ * GET /api/orgs/:orgId/projects
+ * List projects for an org (member only). Ordered by creation time.
  */
 projectsRouter.get(
   "/orgs/:orgId/projects",
@@ -67,7 +69,8 @@ projectsRouter.get(
 );
 
 /**
- * Get board for a project (columns ordered).
+ * GET /api/projects/:projectId/board
+ * Get board for a project. Fetches columns + tasks.
  *
  * Membership check here happens by finding the project's org_id,
  * then verifying the user is in that org.

@@ -3,6 +3,9 @@ import { verifyAccessToken } from "../utils/tokens";
 
 export type AuthedRequest = Request & { user?: { id: string } };
 
+/**
+ * Middleware to require a valid access token.
+ */
 export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
 
