@@ -112,6 +112,7 @@ projectsRouter.get(
         description,
         priority,
         due_date as "dueDate",
+        assignee_user_id as "assigneeUserId",
         created_at as "createdAt",
         updated_at as "updatedAt"
     from tasks

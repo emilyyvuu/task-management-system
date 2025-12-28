@@ -34,7 +34,7 @@ app.use("/api", invitesRouter);
 app.use("/api", membersRouter);
 app.use("/api", commentsRouter);
 app.use("/api", labelsRouter);
-app.use("api", orgMeRouter);
+app.use("/api", orgMeRouter);
 
 app.use(errorHandler);
 

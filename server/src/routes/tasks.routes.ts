@@ -243,7 +243,9 @@ tasksRouter.post("/tasks/:taskId/move", requireAuth, async (req: AuthedRequest, 
     `update tasks set column_id = $1, updated_at = now()
      where id = $2
      returning id, org_id as "orgId", project_id as "projectId", column_id as "columnId",
-               title, description, priority, due_date as "dueDate", created_at as "createdAt", updated_at as "updatedAt"`,
+               title, description, priority, due_date as "dueDate",
+               assignee_user_id as "assigneeUserId",
+               created_at as "createdAt", updated_at as "updatedAt"`,
     [toColumnId, taskId]
   );
 

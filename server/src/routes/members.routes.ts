@@ -106,6 +106,10 @@ membersRouter.delete(
     );
     if (!member.rowCount) return res.status(404).json({ error: "Member not found" });
 
+    if (member.rows[0].userId === req.user!.id) {
+      return res.status(400).json({ error: "Use the leave endpoint to remove yourself" });
+    }
+
     // don't remove the last admin
     if (member.rows[0].role === "ADMIN") {
       const admins = await pool.query(
